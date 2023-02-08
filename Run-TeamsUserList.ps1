@@ -1,5 +1,5 @@
-$tenantID = "705088ec-e683-4174-b9bc-1920644dd49a" #705088ec-e683-4174-b9bc-1920644dd49a
-$localfile = "C:\Users\armin\Powershell\Staedtler-TeamsUserList.xlsx"
+$tenantID = "" #705088ec-e683-4174-b9bc-1920644dd49a
+$localfile = ""
 $sheet = ""
 
 Clear-Host
@@ -51,8 +51,6 @@ Write-Host("["+ $sheetEntry.Index + "] " + $sheetEntry.Name)
 
 $ExcelWorkSheet = $ExcelWorkBook.Sheets.Item($sheetID)
 
-[System.Collections.ArrayList]$nrarray = @{}
-
 $ii = 0
 
 for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
@@ -63,8 +61,6 @@ for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
     $vrp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(5).Text)
     $moh = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(6).Text)
     $vm_lang = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(7).Text)
-
-
 
     $progress = 100 / ($ExcelWorkSheet.UsedRange.Rows.Count - 1) * ($ii++)
     $progressRounded = [math]::Round($progress)
@@ -81,7 +77,7 @@ for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
         Grant-CsTeamsFeedbackPolicy -Identity $user -PolicyName "Disable Survey Policy"
     }
     catch {
-        write-host "Phone Number $number cannot add to $user" -ForegroundColor Yellow 
+        write-host "Phone Number $number cannot be added to $user" -ForegroundColor Yellow 
         $error[0].Exception
         continue
     }
