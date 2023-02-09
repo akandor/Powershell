@@ -1,8 +1,19 @@
-$tenantID = "705088ec-e683-4174-b9bc-1920644dd49a" #705088ec-e683-4174-b9bc-1920644dd49a
+$tenantID = ""
 $localfile = ""
+
+Set-StrictMode -Version "2.0"
+
+$ScriptDirectory = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+
+try {
+Import-Module -Name ($ScriptDirectory + "\lib\ImportExcel")
+}
+catch {
+Write-Host "Error while loading supporting PowerShell Scripts"
+}
+
 $sheet = ""
 [uint16]$sheetID = 0
-$global:progress = 0
 
 Clear-Host
 
@@ -34,18 +45,12 @@ if($localfile -eq "") {
     }
 }
 
-try {
-    $ExcelObj = New-Object -comobject Excel.Application
-} catch {
-    Write-Host "Error while opening Excel. Please be sure that Excel is already installed and restart the script!" -ForegroundColor Red
-    $error[0].Exception
-    Break
-}
+
 
 try {
-    $ExcelWorkBook = $ExcelObj.Workbooks.Open($localfile)
+    $e = Open-ExcelPackage $localfile
 } catch {
-    Write-Host "Error while opening file. Please be sure that Excel is already installed and restart the script!" -ForegroundColor Red
+    Write-Host "Error while opening Excel file!" -ForegroundColor Red
     $error[0].Exception
     Break
 }
@@ -62,41 +67,46 @@ while($sheetID -eq 0) {
     Clear-Host
     Write-Host "Please choose a Workbook Sheet" -ForegroundColor Green
     $i=1
-    $sheetList = Get-Sheets
-    ForEach($sheetEntry in $sheetList) {
-    If($null -eq $sheetEntry.Name -Or $sheetEntry.Name -eq "Data") {
-        continue
-        }
-    Write-Host("["+ $sheetEntry.Index + "] " + $sheetEntry.Name)
+    foreach ($sheet in $e.workbook.worksheets) {
+        If($null -eq $sheet.name -Or $sheet.name -eq "Data" -Or $sheet.name -eq "Template" -Or $sheet.name -eq "Instructions") {
+            continue
+            }
+        Write-Host("["+ $i++ + "] " + $sheet.name)
     }
     $sheetID = Read-Host -Prompt "Choose"
 }
 
-$ExcelWorkSheet = $ExcelWorkBook.Sheets.Item($sheetID)
+$WorkSheets = $e.workbook.worksheets[$sheetID].Cells
+
+[array]$userData = Import-Excel -Path $localfile -WorksheetName $e.workbook.worksheets[$sheetID].Name
 
 Clear-Host
 
-$ii = 1
+$i = 1
 
-for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
+foreach($userEntry in $userData) {
 
-    $global:progress = 100 / ($ExcelWorkSheet.UsedRange.Rows.Count - 1) * ($ii++)
-    $progressRounded = [math]::Round($global:progress)
+    $progress = 100 / ($userData.Count) * ($i)
+    $progressRounded = [math]::Round($progress)
 
-    $user = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(1).Text)
-    $number = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(2).Text)
-    $cp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(3).Text)
-    $dp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(4).Text)
-    $vrp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(5).Text)
-    $moh = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(6).Text)
-    $cpp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(7).Text)
-    $cip = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(8).Text)
-    $emp = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(9).Text)
-    $vm_lang = ($ExcelWorkSheet.Rows.Item($i).Columns.Item(10).Text)
+    $user = $userEntry.UPN
 
-    Write-Progress -Activity "Updating User $user" -Status "$progressRounded% Complete" -PercentComplete $global:progress
+    $user = $userEntry.UPN
+    $number = $userEntry.Number
+    $cp = $userEntry.'Calling Policy'
+    $dp = $userEntry.'Dial Plan'
+    $vrp = $userEntry.'Voice Routing Policy'
+    $moh = $userEntry.'Call Hold Policy'
+    $cpp = $userEntry.'Call Park Policy'
+    $cip = $userEntry.'Caller ID Policy'
+    $emp = $userEntry.'Emergency Policiy'
+    $vm_lang = $userEntry.'Voice Mail'
 
-    if($ExcelWorkSheet.Rows.Item($i).Columns.Item(11).Text -eq "y") {
+    Write-Progress -Activity "Updating User $user" -Id 1 -Status "$progressRounded% Complete" -PercentComplete $progress
+
+    $i++
+
+    if($userEntry.Generated -eq "y") {
         continue
     }
 
@@ -131,7 +141,7 @@ for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
             }
             Grant-CsTeamsFeedbackPolicy -Identity $user -PolicyName "Disable Survey Policy" -ErrorActio Stop
 
-            $ExcelWorkSheet.Rows.Item($i).Columns.Item(11) = "y"
+            $WorkSheets[($i),11].Value = "y"
         }
         
     }
@@ -143,5 +153,9 @@ for($i=2;$i -le $ExcelWorkSheet.UsedRange.Rows.Count;$i++) {
 
 }
 
-$ExcelWorkBook.Save()
-$ExcelWorkBook.close($true)  
+Write-Progress -Activity "Updating User $user" -Id 1 -Completed
+
+Close-ExcelPackage $e
+
+$message ="All done! Press any key to quit."
+pause ($message)
