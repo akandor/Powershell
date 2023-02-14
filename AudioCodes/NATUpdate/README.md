@@ -1,0 +1,1 @@
+# Powershell Script to update Public NAT in Audiocodes SBC
