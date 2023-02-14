@@ -1,0 +1,1 @@
+# Powershell Script to create an Teams ready INI file to upload to Audiocodes SBC
