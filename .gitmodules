@@ -1,0 +1,3 @@
+[submodule "library/Import-Excel"]
+	path = library/Import-Excel
+	url = https://github.com/dfinke/ImportExcel.git
