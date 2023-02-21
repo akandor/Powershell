@@ -1,5 +1,7 @@
 # My Powershell Library
 
+Use git clone --recurse-submodules https://github.com/akandor/Powershell.git
+
 ## Run-/Create-TeamsUserList.ps1
 Use the Tempalte Excel file to set policies for enterprise voice enabled users.
 
