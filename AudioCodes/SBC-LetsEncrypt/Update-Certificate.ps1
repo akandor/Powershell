@@ -2,7 +2,7 @@
 # Update the AudioCodes SBC TLS Context with a Let's encrypt certificate
 # using Cloudflare hosted Domain
 #
-# Version 1.0.0 (Build 1.0.0-2023-02-21)
+# Version 1.1.0 (Build 1.0.0-2023-02-21)
 # 
 # AT
 #
@@ -25,7 +25,7 @@
 $CFAuthEmail = 'email@email.com' # Your cloudflare account email
 $CFAuthKey = 'xxxxxxxxYourCloudFlareAPIKeyxxxxxxxxxx' # Gloabl API Key | https://poshac.me/docs/v4/Plugins/Cloudflare/#using-the-plugin
 $PFXPass = 'StrongPFXPasswordGoesHere' # Change to a strong Password for the PFX file. Generated key will be saved without password
-$Domains = "mydomain.com" #  Example for wilcard and subdomain "*.root.com","*.sub.root.com","root.com"
+$Domains = @("*.root.com","*.sub.root.com","root.com") #  Example for wilcard and subdomain "*.root.com","*.sub.root.com","root.com"
 $DownloadPath = "C:\temp\_LetsEncryptCerts$((Get-Date).ToString('yyyyMM'))" # Set filepath for the let's encrypt files
 $ContactEmail = 'email@email.com' # Contact Email for Let's encrypt
 
@@ -43,18 +43,35 @@ $tlsContextID = 3
 #########################################################################################
 
 Set-PAServer LE_PROD
+
+# Check if Certificate already exists
+$Path = Get-PACertificate $Domains[0] | select -ExpandProperty CertFile
+
 $FriendlyName = "LetsEncrypt_$((Get-Date).AddDays(90).ToString('yyyy-MM-dd'))"
 $CFParams = @{CFAuthEmail=$CFAuthEmail; CFAuthKey=$CFAuthKey}
 
 # Create Certificate
-$NewCertificate = New-PACertificate $Domains -AcceptTOS -Contact $ContactEmail -DnsPlugin Cloudflare -PluginArgs $CFParams -DNSSleep 180 -PfxPass $PFXPass -Force
-$NewCertificate
-
+if($Null -eq $Path -Or $Path -eq "") {
+    Write-Host "New Certificate will be created" -ForegroundColor Green
+    $NewCertificate = New-PACertificate $Domains -AcceptTOS -Contact $ContactEmail -DnsPlugin Cloudflare -PluginArgs $CFParams -DNSSleep 180 -PfxPass $PFXPass -Force
+    $NewCertificate
+} else {
+    Write-Host "Renew Certificate" -ForegroundColor Green
+    $NewCertificate = Submit-Renewal $Domains[0] -Force
+    $NewCertificate
+}
 
 # Copy files to local path
 #ProdPath = "$env:LOCALAPPDATA\Posh-ACME\acme-v02.api.letsencrypt.org"
-mkdir $DownloadPath
-$Path = Get-PACertificate | select -ExpandProperty CertFile
+
+try {
+    mkdir $DownloadPath -ErrorAction Stop
+}
+catch {
+    continue
+}
+
+$Path = Get-PACertificate $Domains[0] | select -ExpandProperty CertFile
 $Path = $Path.Substring(0,$Path.LastIndexOf('\'))
 Copy-Item "$Path\cert.cer" $DownloadPath -Force
 Copy-Item "$Path\cert.key" $DownloadPath -Force
