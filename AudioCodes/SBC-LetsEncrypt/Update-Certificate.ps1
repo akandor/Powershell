@@ -42,6 +42,14 @@ $tlsContextID = 3
 #                            DO NOT EDIT BELOW THESE LINES!                             #
 #########################################################################################
 
+$CheckPAAccount = Get-PAAccount -List -Contact $ContactEmail
+
+if($CheckPAAccount.status -ne "valid") {
+    New-PAAccount -Contact $ContactEmail -AcceptTOS
+}
+
+Set-PAAccount -Contact $ContactEmail 
+
 Set-PAServer LE_PROD
 
 # Check if Certificate already exists
@@ -61,15 +69,10 @@ if($Null -eq $Path -Or $Path -eq "") {
     $NewCertificate
 }
 
-# Copy files to local path
-#ProdPath = "$env:LOCALAPPDATA\Posh-ACME\acme-v02.api.letsencrypt.org"
-
-try {
-    mkdir $DownloadPath -ErrorAction Stop
-}
-catch {
-    continue
-}
+If(!(Test-Path -PathType container $DownloadPath))
+{
+      New-Item -ItemType Directory -Path $DownloadPath
+} 
 
 $Path = Get-PACertificate $Domains[0] | select -ExpandProperty CertFile
 $Path = $Path.Substring(0,$Path.LastIndexOf('\'))
