@@ -18,6 +18,7 @@ $cliData =  "configure network$LF nat-translation 0$LF src-interface-name `"IF-W
 # CLI URL
 $URLFull = "http://{0}/api/v1/files/cliScript" ` -f $ip
 $URLIncremental = "http://{0}/api/v1/files/cliScript/incremental" ` -f $ip
+$URLsave = "http://{0}/api/v1/actions/saveConfiguration" ` -f $ip 
 
 # REST API Authentication
 $authHash = [Convert]::ToBase64String( ` [Text.Encoding]::ASCII.GetBytes( ` ("{0}:{1}" -f $username,$password)))
@@ -45,5 +46,8 @@ if($targetIPString) {
     if($targetIPString -ne $mypublicip) {
         $changeIP = Invoke-RestMethod -Uri $URLIncremental -Method Put ` -Headers @{Authorization=("Basic {0}" -f $authHash)} ` -ContentType "multipart/form-data; boundary=$boundary" ` -Body $bodyLines
         $changeIP | ConvertTo-Json
+
+        $saveConf = Invoke-RestMethod -Uri $URLsave -Method Post -Headers @{Authorization=("Basic {0}" -f $authHash)}
+        $saveConf 
     }
 } 
